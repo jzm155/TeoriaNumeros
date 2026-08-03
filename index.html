@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Número Explorer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="toolbar">
+      <div class="field">
+        <label for="start">Início</label>
+        <input id="start" type="number" value="2">
+      </div>
+      <div class="field">
+        <label for="end">Fim</label>
+        <input id="end" type="number" value="100">
+      </div>
+      <div class="field">
+        <label for="filter">Filtro</label>
+        <select id="filter">
+          <option value="all">Todos</option>
+          <option value="prime">Primos</option>
+          <option value="non">Não Primos</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button id="gen">Gerar Painel</button>
+        <button id="toggle" class="secondary">Grid</button>
+      </div>
+    </div>
+
+    <div class="custom-form">
+      <div class="field">
+        <label for="func-name">Nome da função</label>
+        <input id="func-name" type="text" placeholder="Ex: Dobro">
+      </div>
+      <div class="field field--wide">
+        <label for="func-body">Função</label>
+        <input id="func-body" type="text" placeholder="Ex: n * 2">
+      </div>
+      <button id="add-func">Adicionar função</button>
+      <div id="func-list" class="func-list"></div>
+    </div>
+
+    <div class="toolbar toolbar--secondary">
+    </div>
+
+    <div id="panels" class="panels-grid"></div>
+    <aside id="details-panel" class="details-panel" aria-live="polite">
+      <div class="details-panel__header">
+        <h3>Detalhes</h3>
+        <button id="close-details" type="button" aria-label="Fechar painel">×</button>
+      </div>
+      <div id="details-content" class="details-panel__content"></div>
+    </aside>
+    <div id="tip" class="tip"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
