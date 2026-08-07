@@ -27,14 +27,57 @@ document.getElementById("toggle").onclick = () => {
 
 const formatValue = value => {
   if (typeof value === "number") {
-    return Number.isInteger(value) ? value : value.toFixed(4);
+    return Number.isInteger(value) ? value : Number(value.toFixed(1));
   }
   return value;
 };
 
 const formatDifferenceValue = value => {
   if (value === null || value === undefined) return "Não possui";
-  return `${value > 0 ? "+" : ""}${value}`;
+  return `${value > 0 ? "+" : ""}${formatValue(value)}`;
+};
+
+const buildDisplaySelectOptions = () => {
+  const options = [
+    { value: "number", label: "Número" },
+    { value: "half", label: "Metade" },
+    { value: "sqrt", label: "Raiz" },
+    { value: "log", label: "Log" },
+    { value: "prime", label: "Primo" }
+  ];
+
+  customFunctions.forEach(func => options.push({ value: `custom:${func.name}`, label: func.name }));
+
+  return options.map(option => `<option value="${option.value}">${option.label}</option>`).join("");
+};
+
+const getDisplayValue = (number, displayKey) => {
+  if (displayKey === "number") return number;
+  if (displayKey === "half") return number / 2;
+  if (displayKey === "sqrt") return Math.sqrt(number);
+  if (displayKey === "log") return Math.log(number);
+  if (displayKey === "prime") return prime(number) ? "Sim" : "Não";
+  if (displayKey.startsWith("custom:")) {
+    const funcName = displayKey.slice(7);
+    const func = customFunctions.find(fn => fn.name === funcName);
+    if (!func) return "Erro";
+    try {
+      return Function("n", `return ${func.body};`)(number);
+    } catch (error) {
+      return "Erro";
+    }
+  }
+  return number;
+};
+
+const formatDisplayLabel = displayKey => {
+  if (displayKey === "number") return "";
+  if (displayKey === "half") return "N";
+  if (displayKey === "sqrt") return "N";
+  if (displayKey === "log") return "N";
+  if (displayKey === "prime") return "N";
+  if (displayKey.startsWith("custom:")) return "N";
+  return "N";
 };
 
 const buildFunctionRows = number => {
@@ -156,72 +199,80 @@ const renderPanelChart = (container, numbers) => {
     return null;
   }
 
-  container.innerHTML = '<div class="chart-plot"></div>';
-  const plotEl = container.querySelector('.chart-plot');
+  const minValue = Math.min(...numbers);
+  const maxValue = Math.max(...numbers);
+  const range = maxValue - minValue || 1;
+  const width = 900;
+  const height = 220;
+  const horizontalPadding = 30;
+  const step = numbers.length > 1 ? (width - horizontalPadding * 2) / (numbers.length - 1) : 0;
 
-  if (!window.echarts) {
-    plotEl.innerHTML = '<div class="chart-empty">Não foi possível carregar o gráfico.</div>';
-    return null;
-  }
+  const points = numbers.map((value, index) => {
+    const x = numbers.length > 1 ? horizontalPadding + step * index : width / 2;
+    const y = height - ((value - minValue) / range) * height;
+    return { x, y, value, index };
+  });
 
-  const chart = window.echarts.init(plotEl, 'dark');
-  const points = numbers.map((value, index) => ({
-    value,
-    position: index + 1
-  }));
+  const path = points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ");
+  const circles = points.map(point => `
+      <g class="chart-point-group" data-value="${point.value}" data-index="${point.index}">
+        <circle class="chart-point-hit" cx="${point.x}" cy="${point.y}" r="10" />
+        <circle class="chart-point" cx="${point.x}" cy="${point.y}" r="5" />
+        <text class="chart-point-label" x="${point.x}" y="${point.y - 10}" dy="-2">${formatValue(point.value)}</text>
+      </g>
+    `).join("");
 
-  const option = {
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      borderColor: 'rgba(255,255,255,0.12)',
-      textStyle: { color: '#f9fafb', fontFamily: 'DM Sans, sans-serif' },
-      formatter: params => {
-        const point = params[0];
-        return `<strong>Posição:</strong> ${point.data.position}<br/><strong>Valor (N):</strong> ${point.data.value}`;
-      }
-    },
-    grid: { left: 24, right: 16, top: 20, bottom: 28 },
-    xAxis: {
-      type: 'value',
-      name: 'Posição',
-      nameTextStyle: { color: '#cbd5e1', fontFamily: 'DM Sans, sans-serif' },
-      axisLabel: { color: '#cbd5e1', fontFamily: 'DM Sans, sans-serif' },
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.16)' } },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } }
-    },
-    yAxis: {
-      type: 'value',
-      name: 'Valor (N)',
-      nameTextStyle: { color: '#cbd5e1', fontFamily: 'DM Sans, sans-serif' },
-      axisLabel: { color: '#cbd5e1', fontFamily: 'DM Sans, sans-serif' },
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.16)' } },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } }
-    },
-    series: [{
-      name: 'Valores',
-      type: 'line',
-      smooth: true,
-      symbol: 'circle',
-      symbolSize: 6,
-      lineStyle: { color: '#60a5fa', width: 2.5 },
-      itemStyle: { color: '#fbbf24' },
-      areaStyle: {
-        color: new window.echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(96, 165, 250, 0.45)' },
-          { offset: 1, color: 'rgba(96, 165, 250, 0.04)' }
-        ])
-      },
-      data: points.map(point => ({ value: [point.position, point.value], label: point.value, position: point.position }))
-    }]
-  };
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(value => {
+    const y = height - value * height;
+    return `<line class="chart-grid-line" x1="0" y1="${y}" x2="${width}" y2="${y}" />`;
+  }).join("");
 
-  chart.setOption(option);
-  container._chart = chart;
-  return chart;
+  container.innerHTML = `
+    <div class="chart-plot">
+      <div class="chart-summary">
+        <span>Máx: ${formatValue(maxValue)}</span>
+        <span>Mín: ${formatValue(minValue)}</span>
+      </div>
+      <div class="chart-line-wrapper">
+        <div class="chart-tooltip" aria-hidden="true"></div>
+        <svg viewBox="0 0 ${width} ${height}" aria-label="Gráfico de evolução de valores">
+          ${gridLines}
+          <path class="chart-line-path" d="${path}" />
+          ${circles}
+        </svg>
+      </div>
+    </div>
+  `;
+
+  const chartWrapper = container.querySelector('.chart-line-wrapper');
+  const chartTooltip = container.querySelector('.chart-tooltip');
+  const pointGroups = chartWrapper.querySelectorAll('g.chart-point-group');
+
+  pointGroups.forEach(group => {
+    group.addEventListener('mouseenter', event => {
+      const value = group.dataset.value;
+      const index = group.dataset.index;
+      chartTooltip.textContent = `Posição: ${Number(index) + 1} • Valor: ${formatValue(Number(value))}`;
+      chartTooltip.style.display = 'block';
+      chartTooltip.setAttribute('aria-hidden', 'false');
+    });
+
+    group.addEventListener('mousemove', event => {
+      const rect = chartWrapper.getBoundingClientRect();
+      chartTooltip.style.left = `${event.clientX - rect.left + 10}px`;
+      chartTooltip.style.top = `${event.clientY - rect.top + 10}px`;
+    });
+
+    group.addEventListener('mouseleave', () => {
+      chartTooltip.style.display = 'none';
+      chartTooltip.setAttribute('aria-hidden', 'true');
+    });
+  });
+
+  return null;
 };
 
-const renderPanelNumbers = (container, numbers) => {
+const renderPanelNumbers = (container, numbers, displayKey = 'number') => {
   container.innerHTML = '';
   const list = document.createElement('div');
   list.className = 'nums';
@@ -229,26 +280,27 @@ const renderPanelNumbers = (container, numbers) => {
   numbers.forEach((value, index) => {
     const previousNumber = index > 0 ? numbers[index - 1] : null;
     const nextNumber = index < numbers.length - 1 ? numbers[index + 1] : null;
+    const displayValue = formatValue(getDisplayValue(value, displayKey));
     const d = document.createElement('div');
     d.className = 'num';
     d.dataset.number = value;
     d.dataset.position = index + 1;
     d.dataset.previousNumber = previousNumber === null ? '' : previousNumber;
     d.dataset.nextNumber = nextNumber === null ? '' : nextNumber;
-    d.innerHTML = `<span class="num-value">${value}</span>`;
+    d.innerHTML = `<span class="num-value">${displayValue}</span>`;
     d.onclick = () => openDetails(value, { positionIndex: index + 1, previousNumber, nextNumber });
     d.onmousemove = e => {
       tip.style.display = 'block';
       tip.style.left = e.pageX + 15 + 'px';
       tip.style.top = e.pageY + 25 + 'px';
       tip.innerHTML = `
-  <b>Número:</b> ${value}<br>
+  <b>Número:</b> ${formatValue(value)}<br>
   <b>Posição no painel:</b> ${index + 1}º<br>
   <b>Diferença para o anterior:</b> ${formatDifferenceValue(previousNumber === null ? null : value - previousNumber)}<br>
   <b>Diferença para o próximo:</b> ${formatDifferenceValue(nextNumber === null ? null : nextNumber - value)}<br>
-  <b>Metade:</b> ${value / 2}<br>
-  <b>Raiz:</b> ${Math.sqrt(value).toFixed(4)}<br>
-  <b>Log:</b> ${Math.log(value).toFixed(4)}
+  <b>Metade:</b> ${formatValue(value / 2)}<br>
+  <b>Raiz:</b> ${formatValue(Math.sqrt(value))}<br>
+  <b>Log:</b> ${formatValue(Math.log(value))}
 `;
     };
     d.onmouseleave = () => {
@@ -271,7 +323,15 @@ document.getElementById("gen").onclick = () => {
   p.className = "panel";
   p.innerHTML = `
     <div class="panel-header">
-      <h3>${a} → ${b}</h3>
+      <div class="panel-title-wrap">
+        <h3>${a} → ${b}</h3>
+        <div class="panel-display">
+          <span>Exibir</span>
+          <select class="panel-display-select">
+            ${buildDisplaySelectOptions()}
+          </select>
+        </div>
+      </div>
       <div class="panel-actions">
         <span class="panel-count">0 Numeros</span>
         <button class="remove-panel" type="button" aria-label="Remover painel">×</button>
@@ -287,6 +347,8 @@ document.getElementById("gen").onclick = () => {
   `;
 
   const viewEl = p.querySelector(".panel-view");
+  const displaySelect = p.querySelector(".panel-display-select");
+  let currentDisplay = displaySelect.value;
   const tabs = p.querySelectorAll(".panel-tab");
   const countEl = p.querySelector(".panel-count");
   const removeBtn = p.querySelector(".remove-panel");
@@ -298,13 +360,15 @@ document.getElementById("gen").onclick = () => {
 
     if (view === "chart") {
       renderPanelChart(viewEl, visibleNumbers);
-      requestAnimationFrame(() => {
-        if (viewEl._chart) {
-          viewEl._chart.resize();
-        }
-      });
     } else {
-      renderPanelNumbers(viewEl, visibleNumbers);
+      renderPanelNumbers(viewEl, visibleNumbers, currentDisplay);
+    }
+  };
+
+  displaySelect.onchange = event => {
+    currentDisplay = event.target.value;
+    if (p.querySelector('.panel-tab.active').dataset.view === 'nums') {
+      switchPanelView('nums');
     }
   };
 
