@@ -9,6 +9,67 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <button id="side-panel-toggle" class="side-panel-toggle" type="button" aria-label="Abrir painel lateral">☰</button>
+
+  <aside id="side-panel" class="side-panel" aria-label="Painel lateral">
+    <div class="side-panel__header">
+      <div class="side-panel__tabs" role="tablist" aria-label="Ferramentas laterais">
+        <button class="side-panel__tab active" type="button" data-tab="paint" role="tab" aria-selected="true">Quadro</button>
+        <button class="side-panel__tab" type="button" data-tab="calc" role="tab" aria-selected="false">Calculadora</button>
+      </div>
+      <button id="side-panel-close" class="side-panel__close" type="button" aria-label="Fechar painel">×</button>
+    </div>
+
+    <div class="side-panel__content">
+      <section class="side-panel__pane active" id="pane-paint" role="tabpanel">
+        <div class="side-panel__section">
+          <label class="side-panel__field">
+            <span>Cor</span>
+            <input id="paint-color" type="color" value="#38bdf8">
+          </label>
+          <label class="side-panel__field">
+            <span>Tamanho</span>
+            <input id="paint-size" type="range" min="1" max="24" value="4">
+          </label>
+          <div class="paint-tools">
+            <button class="paint-tool active" type="button" data-tool="brush">Pincel</button>
+            <button class="paint-tool" type="button" data-tool="eraser">Borracha</button>
+          </div>
+        </div>
+        <canvas id="paint-canvas" width="320" height="320"></canvas>
+        <div class="side-panel__actions">
+          <button id="paint-clear" type="button">Limpar</button>
+        </div>
+      </section>
+
+      <section class="side-panel__pane" id="pane-calc" role="tabpanel">
+        <div class="calculator">
+          <input id="calc-display" class="calculator__display" value="0" readonly>
+          <div class="calculator__keys">
+            <button class="calculator__key calculator__key--wide" data-value="C">C</button>
+            <button class="calculator__key" data-value="⌫">⌫</button>
+            <button class="calculator__key" data-value="÷">÷</button>
+            <button class="calculator__key" data-value="7">7</button>
+            <button class="calculator__key" data-value="8">8</button>
+            <button class="calculator__key" data-value="9">9</button>
+            <button class="calculator__key" data-value="×">×</button>
+            <button class="calculator__key" data-value="4">4</button>
+            <button class="calculator__key" data-value="5">5</button>
+            <button class="calculator__key" data-value="6">6</button>
+            <button class="calculator__key" data-value="-">−</button>
+            <button class="calculator__key" data-value="1">1</button>
+            <button class="calculator__key" data-value="2">2</button>
+            <button class="calculator__key" data-value="3">3</button>
+            <button class="calculator__key" data-value="+">+</button>
+            <button class="calculator__key" data-value="0">0</button>
+            <button class="calculator__key" data-value=".">.</button>
+            <button class="calculator__key calculator__key--wide" data-value="=">=</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </aside>
+
   <div class="app-shell">
     <div class="toolbar">
       <div class="field">
@@ -46,7 +107,16 @@
     </div>
 
     <div class="toolbar toolbar--secondary">
-      <button id="toggle" class="secondary">Grid</button>
+      <div class="view-toggle" role="group" aria-label="Alternar visualização">
+        <button type="button" class="view-toggle__btn active" data-view="grid" aria-pressed="true">
+          <span class="view-toggle__icon">▦</span>
+          <span>Grid</span>
+        </button>
+        <button type="button" class="view-toggle__btn" data-view="list" aria-pressed="false">
+          <span class="view-toggle__icon">☰</span>
+          <span>Lista</span>
+        </button>
+      </div>
     </div>
 
     <div id="panels" class="panels-grid"></div>

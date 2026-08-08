@@ -10,6 +10,166 @@ const funcList = document.getElementById("func-list");
 let list = false;
 let customFunctions = [];
 
+const sidePanel = document.getElementById("side-panel");
+const sidePanelToggle = document.getElementById("side-panel-toggle");
+const sidePanelClose = document.getElementById("side-panel-close");
+const sidePanelTabs = document.querySelectorAll(".side-panel__tab");
+const sidePanelPanes = document.querySelectorAll(".side-panel__pane");
+const appShell = document.querySelector(".app-shell");
+
+const openSidePanel = () => {
+  sidePanel.classList.add("is-open");
+  appShell.classList.add("app-shell--pushed");
+  sidePanelToggle.classList.add("is-hidden");
+};
+
+const closeSidePanel = () => {
+  sidePanel.classList.remove("is-open");
+  appShell.classList.remove("app-shell--pushed");
+  sidePanelToggle.classList.remove("is-hidden");
+};
+
+sidePanelToggle.onclick = openSidePanel;
+sidePanelClose.onclick = closeSidePanel;
+
+sidePanelTabs.forEach(tab => {
+  tab.onclick = () => {
+    const target = tab.dataset.tab;
+    sidePanelTabs.forEach(item => {
+      const isActive = item.dataset.tab === target;
+      item.classList.toggle("active", isActive);
+      item.setAttribute("aria-selected", String(isActive));
+    });
+
+    sidePanelPanes.forEach(pane => {
+      pane.classList.toggle("active", pane.id === `pane-${target}`);
+    });
+  };
+});
+
+const paintCanvas = document.getElementById("paint-canvas");
+const paintCtx = paintCanvas.getContext("2d");
+const paintColorInput = document.getElementById("paint-color");
+const paintSizeInput = document.getElementById("paint-size");
+const paintClearButton = document.getElementById("paint-clear");
+const paintToolButtons = document.querySelectorAll(".paint-tool");
+let isDrawing = false;
+let activeTool = "brush";
+let lastPoint = { x: 0, y: 0 };
+
+const getCanvasPoint = event => {
+  const rect = paintCanvas.getBoundingClientRect();
+  const scaleX = paintCanvas.width / rect.width;
+  const scaleY = paintCanvas.height / rect.height;
+  return {
+    x: (event.clientX - rect.left) * scaleX,
+    y: (event.clientY - rect.top) * scaleY
+  };
+};
+
+const startPaint = event => {
+  isDrawing = true;
+  const point = getCanvasPoint(event);
+  lastPoint = point;
+  paintCtx.beginPath();
+  paintCtx.moveTo(point.x, point.y);
+};
+
+const drawPaint = event => {
+  if (!isDrawing) return;
+  const point = getCanvasPoint(event);
+  paintCtx.strokeStyle = activeTool === "eraser" ? "#ffffff" : paintColorInput.value;
+  paintCtx.lineWidth = Number(paintSizeInput.value) * (activeTool === "eraser" ? 2 : 1);
+  paintCtx.lineCap = "round";
+  paintCtx.lineJoin = "round";
+  paintCtx.lineTo(point.x, point.y);
+  paintCtx.stroke();
+  lastPoint = point;
+};
+
+const stopPaint = () => {
+  if (!isDrawing) return;
+  isDrawing = false;
+  paintCtx.closePath();
+};
+
+paintCanvas.addEventListener("pointerdown", startPaint);
+paintCanvas.addEventListener("pointermove", drawPaint);
+paintCanvas.addEventListener("pointerup", stopPaint);
+paintCanvas.addEventListener("pointerleave", stopPaint);
+paintCanvas.addEventListener("pointercancel", stopPaint);
+
+paintToolButtons.forEach(button => {
+  button.onclick = () => {
+    activeTool = button.dataset.tool;
+    paintToolButtons.forEach(item => item.classList.toggle("active", item === button));
+  };
+});
+
+paintClearButton.onclick = () => {
+  paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+  paintCtx.fillStyle = "#ffffff";
+  paintCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+};
+
+paintCtx.fillStyle = "#ffffff";
+paintCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+
+const calculatorDisplay = document.getElementById("calc-display");
+const calculatorKeys = document.querySelector(".calculator__keys");
+let calculatorExpression = "";
+
+const updateCalculatorDisplay = () => {
+  calculatorDisplay.value = calculatorExpression || "0";
+};
+
+const appendCalculatorValue = value => {
+  if (value === "C") {
+    calculatorExpression = "";
+    updateCalculatorDisplay();
+    return;
+  }
+
+  if (value === "⌫") {
+    calculatorExpression = calculatorExpression.slice(0, -1);
+    updateCalculatorDisplay();
+    return;
+  }
+
+  if (value === "=") {
+    try {
+      const normalized = calculatorExpression.replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-");
+      calculatorExpression = String(Function(`return (${normalized})`)());
+    } catch (error) {
+      calculatorExpression = "Erro";
+    }
+    updateCalculatorDisplay();
+    return;
+  }
+
+  const normalizedValue = value === "×" ? "*" : value === "÷" ? "/" : value === "−" ? "-" : value;
+
+  if (value === ".") {
+    const lastNumber = calculatorExpression.split(/[-+*/]/).pop();
+    if (lastNumber.includes(".")) return;
+  }
+
+  if (["+", "-", "*", "/"].includes(normalizedValue)) {
+    if (!calculatorExpression || /[+\-*/]$/.test(calculatorExpression)) return;
+  }
+
+  calculatorExpression += normalizedValue;
+  updateCalculatorDisplay();
+};
+
+calculatorKeys.onclick = event => {
+  const button = event.target.closest("button[data-value]");
+  if (!button) return;
+  appendCalculatorValue(button.dataset.value);
+};
+
+updateCalculatorDisplay();
+
 const prime = n => {
   if (n < 2) return false;
   for (let i = 2; i <= Math.sqrt(n); i++) {
@@ -18,12 +178,25 @@ const prime = n => {
   return true;
 };
 
-document.getElementById("toggle").onclick = () => {
-  list = !list;
-  panels.classList.toggle("panels-list", list);
-  panels.classList.toggle("panels-grid", !list);
-  document.getElementById("toggle").textContent = list ? "Lista" : "Grid";
+const viewToggleButtons = document.querySelectorAll('.view-toggle__btn');
+
+const setViewMode = view => {
+  list = view === 'list';
+  panels.classList.toggle('panels-list', list);
+  panels.classList.toggle('panels-grid', !list);
+
+  viewToggleButtons.forEach(button => {
+    const isActive = button.dataset.view === view;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
 };
+
+viewToggleButtons.forEach(button => {
+  button.onclick = () => setViewMode(button.dataset.view);
+});
+
+setViewMode('grid');
 
 const formatValue = value => {
   if (typeof value === "number") {
@@ -37,13 +210,22 @@ const formatDifferenceValue = value => {
   return `${value > 0 ? "+" : ""}${formatValue(value)}`;
 };
 
+const formatBaseValue = (value, base) => {
+  if (!Number.isFinite(value)) return "Não aplicável";
+  if (base === 2) return value.toString(2);
+  if (base === 16) return value.toString(16).toUpperCase();
+  return String(value);
+};
+
 const buildDisplaySelectOptions = () => {
   const options = [
     { value: "number", label: "Número" },
     { value: "half", label: "Metade" },
     { value: "sqrt", label: "Raiz" },
     { value: "log", label: "Log" },
-    { value: "prime", label: "Primo" }
+    { value: "prime", label: "Primo" },
+    { value: "binary", label: "Binário" },
+    { value: "hex", label: "Hexadecimal" }
   ];
 
   customFunctions.forEach(func => options.push({ value: `custom:${func.name}`, label: func.name }));
@@ -57,6 +239,8 @@ const getDisplayValue = (number, displayKey) => {
   if (displayKey === "sqrt") return Math.sqrt(number);
   if (displayKey === "log") return Math.log(number);
   if (displayKey === "prime") return prime(number) ? "Sim" : "Não";
+  if (displayKey === "binary") return formatBaseValue(number, 2);
+  if (displayKey === "hex") return formatBaseValue(number, 16);
   if (displayKey.startsWith("custom:")) {
     const funcName = displayKey.slice(7);
     const func = customFunctions.find(fn => fn.name === funcName);
@@ -101,13 +285,17 @@ const buildFunctionRows = number => {
 };
 
 const buildNumberDetailsRows = (number, positionIndex, previousNumber, nextNumber) => {
+  const baseRows = [
+    { label: "Binário", value: formatBaseValue(number, 2) },
+    { label: "Hexadecimal", value: formatBaseValue(number, 16) }
+  ];
   const metadataRows = [
     { label: "Posição no painel", value: `${positionIndex}º` },
     { label: "Diferença para o anterior", value: formatDifferenceValue(previousNumber === null ? null : number - previousNumber) },
     { label: "Diferença para o próximo", value: formatDifferenceValue(nextNumber === null ? null : nextNumber - number) }
   ];
 
-  return `${metadataRows.map(item => `<div class="details-item"><span>${item.label}</span><strong>${item.value}</strong></div>`).join("")}${buildFunctionRows(number)}`;
+  return `${baseRows.map(item => `<div class="details-item"><span>${item.label}</span><strong>${item.value}</strong></div>`).join("")}${metadataRows.map(item => `<div class="details-item"><span>${item.label}</span><strong>${item.value}</strong></div>`).join("")}${buildFunctionRows(number)}`;
 };
 
 const openDetails = (number, context = {}) => {
@@ -295,6 +483,8 @@ const renderPanelNumbers = (container, numbers, displayKey = 'number') => {
       tip.style.top = e.pageY + 25 + 'px';
       tip.innerHTML = `
   <b>Número:</b> ${formatValue(value)}<br>
+  <b>Binário:</b> ${formatBaseValue(value, 2)}<br>
+  <b>Hexadecimal:</b> ${formatBaseValue(value, 16)}<br>
   <b>Posição no painel:</b> ${index + 1}º<br>
   <b>Diferença para o anterior:</b> ${formatDifferenceValue(previousNumber === null ? null : value - previousNumber)}<br>
   <b>Diferença para o próximo:</b> ${formatDifferenceValue(nextNumber === null ? null : nextNumber - value)}<br>
