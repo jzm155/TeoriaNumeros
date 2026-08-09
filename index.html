@@ -89,21 +89,9 @@
         </select>
       </div>
       <div class="actions">
+        <button id="config-open" class="secondary" type="button">Configurações</button>
         <button id="gen">Gerar Painel</button>
       </div>
-    </div>
-
-    <div class="custom-form">
-      <div class="field">
-        <label for="func-name">Nome da função</label>
-        <input id="func-name" type="text" placeholder="Ex: Dobro">
-      </div>
-      <div class="field field--wide">
-        <label for="func-body">Função</label>
-        <input id="func-body" type="text" placeholder="Ex: n * 2">
-      </div>
-      <button id="add-func">Adicionar função</button>
-      <div id="func-list" class="func-list"></div>
     </div>
 
     <div class="toolbar toolbar--secondary">
@@ -128,6 +116,48 @@
       <div id="details-content" class="details-panel__content"></div>
     </aside>
     <div id="tip" class="tip"></div>
+  </div>
+
+  <div id="config-modal" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" data-close-modal="true"></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="config-modal-title">
+      <div class="modal__header">
+        <div>
+          <h2 id="config-modal-title">Configurações de exibição</h2>
+          <p>Escolha quais valores aparecem nos painéis e adicione novas funções.</p>
+        </div>
+        <button id="config-close" class="modal__close" type="button" aria-label="Fechar configurações">×</button>
+      </div>
+
+      <div class="modal__content">
+        <section class="config-section">
+          <div class="config-section__header">
+            <h3>Opções de exibição</h3>
+            <span>Marque as opções que devem aparecer nos painéis.</span>
+          </div>
+          <div id="display-options-list" class="display-options-list"></div>
+        </section>
+
+        <section class="config-section">
+          <div class="config-section__header">
+            <h3>Nova função personalizada</h3>
+            <span>Use uma função para criar valores extras.</span>
+          </div>
+          <div class="config-form">
+            <div class="field">
+              <label for="func-name">Nome da função</label>
+              <input id="func-name" type="text" placeholder="Ex: Dobro">
+            </div>
+            <div class="field field--wide">
+              <label for="func-body">Função</label>
+              <input id="func-body" type="text" placeholder="Ex: n * 2">
+            </div>
+            <button id="add-func" type="button">Adicionar função</button>
+          </div>
+          <div id="func-list" class="func-list"></div>
+        </section>
+      </div>
+    </div>
   </div>
 
   <script src="script.js"></script>

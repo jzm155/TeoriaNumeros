@@ -7,8 +7,13 @@ const funcNameInput = document.getElementById("func-name");
 const funcBodyInput = document.getElementById("func-body");
 const addFuncButton = document.getElementById("add-func");
 const funcList = document.getElementById("func-list");
+const configModal = document.getElementById("config-modal");
+const configOpenButton = document.getElementById("config-open");
+const configCloseButton = document.getElementById("config-close");
+const displayOptionsList = document.getElementById("display-options-list");
 let list = false;
 let customFunctions = [];
+let activeDisplayOptions = ["number", "half", "sqrt", "binary", "hex"];
 
 const sidePanel = document.getElementById("side-panel");
 const sidePanelToggle = document.getElementById("side-panel-toggle");
@@ -217,28 +222,32 @@ const formatBaseValue = (value, base) => {
   return String(value);
 };
 
-const buildDisplaySelectOptions = () => {
-  const options = [
-    { value: "number", label: "Número" },
-    { value: "half", label: "Metade" },
-    { value: "sqrt", label: "Raiz" },
-    { value: "log", label: "Log" },
-    { value: "prime", label: "Primo" },
-    { value: "binary", label: "Binário" },
-    { value: "hex", label: "Hexadecimal" }
-  ];
+const baseDisplayOptions = [
+  { value: "number", label: "Número" },
+  { value: "half", label: "Metade" },
+  { value: "sqrt", label: "Raiz" },
+  { value: "binary", label: "Binário" },
+  { value: "hex", label: "Hexadecimal" }
+];
 
+const getAllDisplayOptions = () => {
+  const options = [...baseDisplayOptions];
   customFunctions.forEach(func => options.push({ value: `custom:${func.name}`, label: func.name }));
+  return options;
+};
 
-  return options.map(option => `<option value="${option.value}">${option.label}</option>`).join("");
+const getActiveDisplayOptions = () => {
+  return getAllDisplayOptions().filter(option => activeDisplayOptions.includes(option.value));
+};
+
+const buildDisplaySelectOptions = () => {
+  return getActiveDisplayOptions().map(option => `<option value="${option.value}">${option.label}</option>`).join("");
 };
 
 const getDisplayValue = (number, displayKey) => {
   if (displayKey === "number") return number;
   if (displayKey === "half") return number / 2;
   if (displayKey === "sqrt") return Math.sqrt(number);
-  if (displayKey === "log") return Math.log(number);
-  if (displayKey === "prime") return prime(number) ? "Sim" : "Não";
   if (displayKey === "binary") return formatBaseValue(number, 2);
   if (displayKey === "hex") return formatBaseValue(number, 16);
   if (displayKey.startsWith("custom:")) {
@@ -254,30 +263,46 @@ const getDisplayValue = (number, displayKey) => {
   return number;
 };
 
-const formatDisplayLabel = displayKey => {
-  if (displayKey === "number") return "";
-  if (displayKey === "half") return "N";
-  if (displayKey === "sqrt") return "N";
-  if (displayKey === "log") return "N";
-  if (displayKey === "prime") return "N";
-  if (displayKey.startsWith("custom:")) return "N";
-  return "N";
-};
-
 const buildFunctionRows = number => {
-  const rows = [
-    { label: "Metade", value: number / 2 },
-    { label: "Raiz", value: Math.sqrt(number) },
-    { label: "Log", value: Math.log(number) },
-    { label: "Primo", value: prime(number) ? "Sim" : "Não" }
-  ];
+  const rows = [];
 
-  customFunctions.forEach(func => {
-    try {
-      const result = Function("n", `return ${func.body};`)(number);
-      rows.push({ label: func.name, value: result });
-    } catch (error) {
-      rows.push({ label: func.name, value: "Erro" });
+  getActiveDisplayOptions().forEach(option => {
+    if (option.value === "number") return;
+
+    if (option.value === "half") {
+      rows.push({ label: option.label, value: number / 2 });
+      return;
+    }
+
+    if (option.value === "sqrt") {
+      rows.push({ label: option.label, value: Math.sqrt(number) });
+      return;
+    }
+
+    if (option.value === "binary") {
+      rows.push({ label: option.label, value: formatBaseValue(number, 2) });
+      return;
+    }
+
+    if (option.value === "hex") {
+      rows.push({ label: option.label, value: formatBaseValue(number, 16) });
+      return;
+    }
+
+    if (option.value.startsWith("custom:")) {
+      const funcName = option.value.slice(7);
+      const func = customFunctions.find(fn => fn.name === funcName);
+      if (!func) {
+        rows.push({ label: option.label, value: "Erro" });
+        return;
+      }
+
+      try {
+        const result = Function("n", `return ${func.body};`)(number);
+        rows.push({ label: option.label, value: result });
+      } catch (error) {
+        rows.push({ label: option.label, value: "Erro" });
+      }
     }
   });
 
@@ -346,6 +371,30 @@ const openPanelDetails = panel => {
   detailsPanel.classList.add("open");
 };
 
+const renderDisplayOptions = () => {
+  displayOptionsList.innerHTML = getAllDisplayOptions().map(option => {
+    const isChecked = activeDisplayOptions.includes(option.value);
+    return `
+      <label class="display-option">
+        <input type="checkbox" value="${option.value}" ${isChecked ? "checked" : ""}>
+        <span>${option.label}</span>
+      </label>
+    `;
+  }).join("");
+
+  displayOptionsList.querySelectorAll("input").forEach(input => {
+    input.onchange = () => {
+      const value = input.value;
+      if (input.checked) {
+        if (!activeDisplayOptions.includes(value)) activeDisplayOptions.push(value);
+      } else {
+        activeDisplayOptions = activeDisplayOptions.filter(option => option !== value);
+      }
+      refreshPanelsDisplayOptions();
+    };
+  });
+};
+
 const renderFunctionList = () => {
   funcList.innerHTML = customFunctions.map(func => `
     <div class="func-chip">
@@ -358,8 +407,47 @@ const renderFunctionList = () => {
     button.onclick = () => {
       customFunctions = customFunctions.filter(func => func.name !== button.dataset.name);
       renderFunctionList();
+      renderDisplayOptions();
+      refreshPanelsDisplayOptions();
     };
   });
+};
+
+const refreshPanelsDisplayOptions = () => {
+  document.querySelectorAll(".panel").forEach(panel => {
+    const select = panel.querySelector(".panel-display-select");
+    const viewEl = panel.querySelector(".panel-view");
+    if (!select || !viewEl) return;
+
+    const availableDisplayOptions = getAllDisplayOptions().filter(option => activeDisplayOptions.includes(option.value));
+    const fallbackDisplay = availableDisplayOptions[0]?.value || "number";
+    const currentSelection = select.value;
+    const nextDisplay = availableDisplayOptions.some(option => option.value === currentSelection)
+      ? currentSelection
+      : fallbackDisplay;
+
+    select.innerHTML = availableDisplayOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join("");
+    select.value = nextDisplay;
+    panel._currentDisplay = nextDisplay;
+
+    const activeTab = panel.querySelector('.panel-tab.active')?.dataset.view || 'nums';
+    if (activeTab === 'chart') {
+      renderPanelChart(viewEl, panel._visibleNumbers || []);
+    } else {
+      renderPanelNumbers(viewEl, panel._visibleNumbers || [], panel._currentDisplay);
+    }
+  });
+};
+
+const openConfigModal = () => {
+  renderDisplayOptions();
+  configModal.classList.add("is-open");
+  configModal.setAttribute("aria-hidden", "false");
+};
+
+const closeConfigModal = () => {
+  configModal.classList.remove("is-open");
+  configModal.setAttribute("aria-hidden", "true");
 };
 
 addFuncButton.onclick = () => {
@@ -370,10 +458,25 @@ addFuncButton.onclick = () => {
 
   customFunctions = customFunctions.filter(func => func.name !== name);
   customFunctions.push({ name, body });
+  if (!activeDisplayOptions.includes(`custom:${name}`)) {
+    activeDisplayOptions.push(`custom:${name}`);
+  }
   funcNameInput.value = "";
   funcBodyInput.value = "";
   renderFunctionList();
+  renderDisplayOptions();
+  refreshPanelsDisplayOptions();
 };
+
+configOpenButton.onclick = openConfigModal;
+configCloseButton.onclick = closeConfigModal;
+configModal.querySelector(".modal__backdrop").onclick = closeConfigModal;
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && configModal.classList.contains("is-open")) {
+    closeConfigModal();
+  }
+});
 
 closeDetails.onclick = () => {
   detailsPanel.classList.remove("open");
@@ -538,7 +641,12 @@ document.getElementById("gen").onclick = () => {
 
   const viewEl = p.querySelector(".panel-view");
   const displaySelect = p.querySelector(".panel-display-select");
-  let currentDisplay = displaySelect.value;
+  const availableDisplayOptions = getAllDisplayOptions().filter(option => activeDisplayOptions.includes(option.value));
+  const defaultDisplay = availableDisplayOptions[0]?.value || "number";
+
+  displaySelect.innerHTML = availableDisplayOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join("");
+  displaySelect.value = defaultDisplay;
+  p._currentDisplay = defaultDisplay;
   const tabs = p.querySelectorAll(".panel-tab");
   const countEl = p.querySelector(".panel-count");
   const removeBtn = p.querySelector(".remove-panel");
@@ -551,12 +659,12 @@ document.getElementById("gen").onclick = () => {
     if (view === "chart") {
       renderPanelChart(viewEl, visibleNumbers);
     } else {
-      renderPanelNumbers(viewEl, visibleNumbers, currentDisplay);
+      renderPanelNumbers(viewEl, visibleNumbers, p._currentDisplay);
     }
   };
 
   displaySelect.onchange = event => {
-    currentDisplay = event.target.value;
+    p._currentDisplay = event.target.value;
     if (p.querySelector('.panel-tab.active').dataset.view === 'nums') {
       switchPanelView('nums');
     }
@@ -588,6 +696,7 @@ document.getElementById("gen").onclick = () => {
     visibleNumbers.push(i);
   }
 
+  p._visibleNumbers = visibleNumbers;
   switchPanelView("nums");
   countEl.textContent = `${visibleNumbers.length} item${visibleNumbers.length === 1 ? "" : "s"}`;
   panels.appendChild(p);
