@@ -16,8 +16,12 @@
       <div class="side-panel__tabs" role="tablist" aria-label="Ferramentas laterais">
         <button class="side-panel__tab active" type="button" data-tab="paint" role="tab" aria-selected="true">Quadro</button>
         <button class="side-panel__tab" type="button" data-tab="calc" role="tab" aria-selected="false">Calculadora</button>
+        <button class="side-panel__tab" type="button" data-tab="notes" role="tab" aria-selected="false">Bloco de notas</button>
       </div>
-      <button id="side-panel-close" class="side-panel__close" type="button" aria-label="Fechar painel">×</button>
+      <div class="side-panel__header-actions">
+        <button id="side-panel-fullscreen" class="side-panel__fullscreen" type="button" aria-label="Expandir painel para tela cheia" aria-pressed="false">⛶</button>
+        <button id="side-panel-close" class="side-panel__close" type="button" aria-label="Fechar painel">×</button>
+      </div>
     </div>
 
     <div class="side-panel__content">
@@ -66,6 +70,13 @@
             <button class="calculator__key calculator__key--wide" data-value="=">=</button>
           </div>
         </div>
+      </section>
+
+      <section class="side-panel__pane" id="pane-notes" role="tabpanel" aria-label="Bloco de notas">
+        <label class="notes-field" for="notes-textarea">
+          <span>Suas anotações</span>
+          <textarea id="notes-textarea" placeholder="Escreva suas anotações aqui..."></textarea>
+        </label>
       </section>
     </div>
   </aside>

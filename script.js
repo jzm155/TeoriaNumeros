@@ -13,11 +13,12 @@ const configCloseButton = document.getElementById("config-close");
 const displayOptionsList = document.getElementById("display-options-list");
 let list = false;
 let customFunctions = [];
-let activeDisplayOptions = ["number", "half", "sqrt", "binary", "hex"];
+let activeDisplayOptions = ["number", "half", "sqrt", "binary", "hex", "factorization", "eratosthenes"];
 
 const sidePanel = document.getElementById("side-panel");
 const sidePanelToggle = document.getElementById("side-panel-toggle");
 const sidePanelClose = document.getElementById("side-panel-close");
+const sidePanelFullscreen = document.getElementById("side-panel-fullscreen");
 const sidePanelTabs = document.querySelectorAll(".side-panel__tab");
 const sidePanelPanes = document.querySelectorAll(".side-panel__pane");
 const appShell = document.querySelector(".app-shell");
@@ -30,12 +31,23 @@ const openSidePanel = () => {
 
 const closeSidePanel = () => {
   sidePanel.classList.remove("is-open");
+  sidePanel.classList.remove("is-fullscreen");
   appShell.classList.remove("app-shell--pushed");
   sidePanelToggle.classList.remove("is-hidden");
+  sidePanelFullscreen.setAttribute("aria-pressed", "false");
+  sidePanelFullscreen.setAttribute("aria-label", "Expandir painel para tela cheia");
 };
 
 sidePanelToggle.onclick = openSidePanel;
 sidePanelClose.onclick = closeSidePanel;
+sidePanelFullscreen.onclick = () => {
+  const isFullscreen = sidePanel.classList.toggle("is-fullscreen");
+  sidePanelFullscreen.setAttribute("aria-pressed", String(isFullscreen));
+  sidePanelFullscreen.setAttribute(
+    "aria-label",
+    isFullscreen ? "Restaurar tamanho do painel" : "Expandir painel para tela cheia"
+  );
+};
 
 sidePanelTabs.forEach(tab => {
   tab.onclick = () => {
@@ -173,14 +185,56 @@ calculatorKeys.onclick = event => {
   appendCalculatorValue(button.dataset.value);
 };
 
+document.addEventListener("keydown", event => {
+  if (document.activeElement !== calculatorDisplay) return;
+
+  if (/^\d$/.test(event.key) || [".", "+", "-", "*", "/"].includes(event.key)) {
+    appendCalculatorValue(event.key);
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key === "Enter") {
+    appendCalculatorValue("=");
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key === "Backspace") {
+    calculatorExpression = calculatorExpression.slice(0, -1);
+    updateCalculatorDisplay();
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key === "Escape") {
+    appendCalculatorValue("C");
+    event.preventDefault();
+  }
+});
+
 updateCalculatorDisplay();
 
-const prime = n => {
-  if (n < 2) return false;
-  for (let i = 2; i <= Math.sqrt(n); i++) {
-    if (n % i === 0) return false;
+const createEratosthenesSieve = limit => {
+  const max = Math.floor(limit);
+  if (!Number.isSafeInteger(max) || max < 2) return new Uint8Array(0);
+
+  const sieve = new Uint8Array(max + 1);
+  sieve.fill(1, 2);
+
+  for (let prime = 2; prime * prime <= max; prime++) {
+    if (!sieve[prime]) continue;
+    for (let multiple = prime * prime; multiple <= max; multiple += prime) {
+      sieve[multiple] = 0;
+    }
   }
-  return true;
+
+  return sieve;
+};
+
+const formatEratosthenesSieve = value => {
+  if (!Number.isFinite(value) || value <= 1) return "Não aplicável";
+  return value / Math.log(value);
 };
 
 const viewToggleButtons = document.querySelectorAll('.view-toggle__btn');
@@ -222,12 +276,36 @@ const formatBaseValue = (value, base) => {
   return String(value);
 };
 
+const formatFactorization = value => {
+  if (!Number.isSafeInteger(value)) return "Não aplicável";
+  if (value === -1 || value === 0 || value === 1) return String(value);
+
+  const factors = [];
+  let number = Math.abs(value);
+  let divisor = 2;
+
+  while (divisor * divisor <= number) {
+    let exponent = 0;
+    while (number % divisor === 0) {
+      number /= divisor;
+      exponent += 1;
+    }
+    if (exponent > 0) factors.push(exponent === 1 ? String(divisor) : `${divisor}^${exponent}`);
+    divisor += divisor === 2 ? 1 : 2;
+  }
+
+  if (number > 1) factors.push(String(number));
+  return `${value < 0 ? "-1 × " : ""}${factors.join(" × ")}`;
+};
+
 const baseDisplayOptions = [
   { value: "number", label: "Número" },
   { value: "half", label: "Metade" },
   { value: "sqrt", label: "Raiz" },
   { value: "binary", label: "Binário" },
-  { value: "hex", label: "Hexadecimal" }
+  { value: "hex", label: "Hexadecimal" },
+  { value: "factorization", label: "Fatoração" },
+  { value: "eratosthenes", label: "Crivo de Eratóstenes" }
 ];
 
 const getAllDisplayOptions = () => {
@@ -250,6 +328,8 @@ const getDisplayValue = (number, displayKey) => {
   if (displayKey === "sqrt") return Math.sqrt(number);
   if (displayKey === "binary") return formatBaseValue(number, 2);
   if (displayKey === "hex") return formatBaseValue(number, 16);
+  if (displayKey === "factorization") return formatFactorization(number);
+  if (displayKey === "eratosthenes") return formatEratosthenesSieve(number);
   if (displayKey.startsWith("custom:")) {
     const funcName = displayKey.slice(7);
     const func = customFunctions.find(fn => fn.name === funcName);
@@ -286,6 +366,16 @@ const buildFunctionRows = number => {
 
     if (option.value === "hex") {
       rows.push({ label: option.label, value: formatBaseValue(number, 16) });
+      return;
+    }
+
+    if (option.value === "factorization") {
+      rows.push({ label: option.label, value: formatFactorization(number) });
+      return;
+    }
+
+    if (option.value === "eratosthenes") {
+      rows.push({ label: option.label, value: formatEratosthenesSieve(number) });
       return;
     }
 
@@ -688,10 +778,12 @@ document.getElementById("gen").onclick = () => {
   };
 
   const visibleNumbers = [];
+  const primeSieve = createEratosthenesSieve(b);
+  const isPrime = number => Number.isInteger(number) && number >= 2 && primeSieve[number] === 1;
 
   for (let i = a; i <= b; i++) {
-    if (f === "prime" && !prime(i)) continue;
-    if (f === "non" && (prime(i) || i < 2)) continue;
+    if (f === "prime" && !isPrime(i)) continue;
+    if (f === "non" && (isPrime(i) || i < 2)) continue;
 
     visibleNumbers.push(i);
   }
