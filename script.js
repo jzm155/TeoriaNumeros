@@ -13,7 +13,7 @@ const configCloseButton = document.getElementById("config-close");
 const displayOptionsList = document.getElementById("display-options-list");
 let list = false;
 let customFunctions = [];
-let activeDisplayOptions = ["number", "half", "sqrt", "binary", "hex", "factorization", "eratosthenes"];
+let activeDisplayOptions = ["number", "half", "sqrt", "log", "binary", "hex", "factorization", "eratosthenes"];
 
 const sidePanel = document.getElementById("side-panel");
 const sidePanelToggle = document.getElementById("side-panel-toggle");
@@ -302,10 +302,11 @@ const baseDisplayOptions = [
   { value: "number", label: "Número" },
   { value: "half", label: "Metade" },
   { value: "sqrt", label: "Raiz" },
+  { value: "log", label: "Log" },
   { value: "binary", label: "Binário" },
   { value: "hex", label: "Hexadecimal" },
   { value: "factorization", label: "Fatoração" },
-  { value: "eratosthenes", label: "Crivo de Eratóstenes" }
+  { value: "eratosthenes", label: "Teorema de numeros primos" }
 ];
 
 const getAllDisplayOptions = () => {
@@ -326,6 +327,7 @@ const getDisplayValue = (number, displayKey) => {
   if (displayKey === "number") return number;
   if (displayKey === "half") return number / 2;
   if (displayKey === "sqrt") return Math.sqrt(number);
+  if (displayKey === "log") return Math.log(number);
   if (displayKey === "binary") return formatBaseValue(number, 2);
   if (displayKey === "hex") return formatBaseValue(number, 16);
   if (displayKey === "factorization") return formatFactorization(number);
@@ -344,73 +346,27 @@ const getDisplayValue = (number, displayKey) => {
 };
 
 const buildFunctionRows = number => {
-  const rows = [];
+  return getActiveDisplayOptions()
+    .filter(option => option.value !== "number")
+    .map(option => ({ label: option.label, value: getDisplayValue(number, option.value) }))
+    .map(item => `<div class="details-item"><span>${item.label}</span><strong>${formatValue(item.value)}</strong></div>`)
+    .join("");
+};
 
-  getActiveDisplayOptions().forEach(option => {
-    if (option.value === "number") return;
-
-    if (option.value === "half") {
-      rows.push({ label: option.label, value: number / 2 });
-      return;
-    }
-
-    if (option.value === "sqrt") {
-      rows.push({ label: option.label, value: Math.sqrt(number) });
-      return;
-    }
-
-    if (option.value === "binary") {
-      rows.push({ label: option.label, value: formatBaseValue(number, 2) });
-      return;
-    }
-
-    if (option.value === "hex") {
-      rows.push({ label: option.label, value: formatBaseValue(number, 16) });
-      return;
-    }
-
-    if (option.value === "factorization") {
-      rows.push({ label: option.label, value: formatFactorization(number) });
-      return;
-    }
-
-    if (option.value === "eratosthenes") {
-      rows.push({ label: option.label, value: formatEratosthenesSieve(number) });
-      return;
-    }
-
-    if (option.value.startsWith("custom:")) {
-      const funcName = option.value.slice(7);
-      const func = customFunctions.find(fn => fn.name === funcName);
-      if (!func) {
-        rows.push({ label: option.label, value: "Erro" });
-        return;
-      }
-
-      try {
-        const result = Function("n", `return ${func.body};`)(number);
-        rows.push({ label: option.label, value: result });
-      } catch (error) {
-        rows.push({ label: option.label, value: "Erro" });
-      }
-    }
-  });
-
-  return rows.map(item => `<div class="details-item"><span>${item.label}</span><strong>${formatValue(item.value)}</strong></div>`).join("");
+const buildHoverDisplayRows = number => {
+  return getActiveDisplayOptions()
+    .map(option => `<b>${option.label}:</b> ${formatValue(getDisplayValue(number, option.value))}`)
+    .join("<br>");
 };
 
 const buildNumberDetailsRows = (number, positionIndex, previousNumber, nextNumber) => {
-  const baseRows = [
-    { label: "Binário", value: formatBaseValue(number, 2) },
-    { label: "Hexadecimal", value: formatBaseValue(number, 16) }
-  ];
   const metadataRows = [
     { label: "Posição no painel", value: `${positionIndex}º` },
     { label: "Diferença para o anterior", value: formatDifferenceValue(previousNumber === null ? null : number - previousNumber) },
     { label: "Diferença para o próximo", value: formatDifferenceValue(nextNumber === null ? null : nextNumber - number) }
   ];
 
-  return `${baseRows.map(item => `<div class="details-item"><span>${item.label}</span><strong>${item.value}</strong></div>`).join("")}${metadataRows.map(item => `<div class="details-item"><span>${item.label}</span><strong>${item.value}</strong></div>`).join("")}${buildFunctionRows(number)}`;
+  return `${metadataRows.map(item => `<div class="details-item"><span>${item.label}</span><strong>${item.value}</strong></div>`).join("")}${buildFunctionRows(number)}`;
 };
 
 const openDetails = (number, context = {}) => {
@@ -674,17 +630,10 @@ const renderPanelNumbers = (container, numbers, displayKey = 'number') => {
       tip.style.display = 'block';
       tip.style.left = e.pageX + 15 + 'px';
       tip.style.top = e.pageY + 25 + 'px';
-      tip.innerHTML = `
-  <b>Número:</b> ${formatValue(value)}<br>
-  <b>Binário:</b> ${formatBaseValue(value, 2)}<br>
-  <b>Hexadecimal:</b> ${formatBaseValue(value, 16)}<br>
+      tip.innerHTML = `${buildHoverDisplayRows(value)}${getActiveDisplayOptions().length ? "<br>" : ""}
   <b>Posição no painel:</b> ${index + 1}º<br>
   <b>Diferença para o anterior:</b> ${formatDifferenceValue(previousNumber === null ? null : value - previousNumber)}<br>
-  <b>Diferença para o próximo:</b> ${formatDifferenceValue(nextNumber === null ? null : nextNumber - value)}<br>
-  <b>Metade:</b> ${formatValue(value / 2)}<br>
-  <b>Raiz:</b> ${formatValue(Math.sqrt(value))}<br>
-  <b>Log:</b> ${formatValue(Math.log(value))}
-`;
+  <b>Diferença para o próximo:</b> ${formatDifferenceValue(nextNumber === null ? null : nextNumber - value)}`;
     };
     d.onmouseleave = () => {
       tip.style.display = 'none';
