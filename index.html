@@ -163,10 +163,94 @@
               <label for="func-body">Função</label>
               <input id="func-body" type="text" placeholder="Ex: n * 2">
             </div>
+            <button id="expression-builder-open" class="config-form__builder" type="button">Montar expressão</button>
             <button id="add-func" type="button">Adicionar função</button>
           </div>
           <div id="func-list" class="func-list"></div>
         </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="expression-builder-modal" class="modal expression-builder-modal" aria-hidden="true">
+    <div class="modal__backdrop" data-close-expression-builder="true"></div>
+    <div class="modal__dialog expression-builder" role="dialog" aria-modal="true" aria-labelledby="expression-builder-title">
+      <div class="modal__header">
+        <div>
+          <h2 id="expression-builder-title">Montar expressão</h2>
+          <p>Use <strong>n</strong> como o número do painel. Monte a conta pelos botões ou edite o campo.</p>
+        </div>
+        <button id="expression-builder-close" class="modal__close" type="button" aria-label="Fechar montador de expressão">×</button>
+      </div>
+
+      <label class="expression-builder__field" for="expression-builder-input">
+        <span>Expressão</span>
+        <input id="expression-builder-input" type="text" autocomplete="off" spellcheck="false" placeholder="Ex: Math.log10(n) + n ** 2">
+      </label>
+      <p class="expression-builder__hint">Funções inseridas: log = base 10, ln = logaritmo natural e √ = raiz quadrada.</p>
+
+      <section class="expression-builder__presets" aria-labelledby="expression-presets-title">
+        <div class="expression-builder__presets-header">
+          <h3 id="expression-presets-title">Expressões clássicas</h3>
+          <span>Ao escolher uma, o nome e a expressão serão preenchidos.</span>
+        </div>
+        <div class="expression-builder__presets-list">
+          <button type="button" data-preset-name="Gauss — soma" data-expression="n * (n + 1) / 2">
+            <strong>Gauss</strong>
+            <span>Soma de 1 até n</span>
+          </button>
+          <button type="button" data-preset-name="Euler — polinômio" data-expression="n ** 2 + n + 41">
+            <strong>Euler</strong>
+            <span>Polinômio n² + n + 41</span>
+          </button>
+          <button type="button" data-preset-name="Riemann — estimativa de primos" data-expression="n / Math.log(n)">
+            <strong>Riemann</strong>
+            <span>Estimativa de π(n)</span>
+          </button>
+          <button type="button" data-preset-name="Bhaskara — raiz positiva" data-expression="(-n + Math.sqrt(n ** 2 + 4)) / 2">
+            <strong>Bhaskara</strong>
+            <span>Raiz de x² + nx − 1</span>
+          </button>
+        </div>
+        <p class="expression-builder__preset-note">A opção de Riemann é uma aproximação clássica para a quantidade de primos até n; ela não testa a Hipótese de Riemann.</p>
+      </section>
+
+      <div class="expression-builder__keys" aria-label="Teclas para montar expressão">
+        <button type="button" data-insert="n">n</button>
+        <button type="button" data-insert="(">(</button>
+        <button type="button" data-insert=")">)</button>
+        <button type="button" data-action="backspace" aria-label="Apagar último caractere">⌫</button>
+        <button type="button" data-insert="Math.log10()" data-caret="-1">log</button>
+        <button type="button" data-insert="Math.log()" data-caret="-1">ln</button>
+        <button type="button" data-insert="Math.sqrt()" data-caret="-1">√</button>
+        <button type="button" data-insert="**" title="Potência">xʸ</button>
+        <button type="button" data-insert="7">7</button>
+        <button type="button" data-insert="8">8</button>
+        <button type="button" data-insert="9">9</button>
+        <button type="button" data-insert=" / ">÷</button>
+        <button type="button" data-insert="4">4</button>
+        <button type="button" data-insert="5">5</button>
+        <button type="button" data-insert="6">6</button>
+        <button type="button" data-insert=" * ">×</button>
+        <button type="button" data-insert="1">1</button>
+        <button type="button" data-insert="2">2</button>
+        <button type="button" data-insert="3">3</button>
+        <button type="button" data-insert=" - ">−</button>
+        <button type="button" data-insert="0">0</button>
+        <button type="button" data-insert=".">.</button>
+        <button type="button" data-action="clear">Limpar</button>
+        <button type="button" data-insert=" + ">+</button>
+      </div>
+
+      <div class="expression-builder__test">
+        <label for="expression-test-value">Testar com n =</label>
+        <input id="expression-test-value" type="number" value="10">
+        <output id="expression-test-result" aria-live="polite">Insira uma expressão para testar.</output>
+      </div>
+
+      <div class="expression-builder__actions">
+        <button id="expression-builder-cancel" class="expression-builder__cancel" type="button">Cancelar</button>
+        <button id="expression-builder-apply" type="button">Usar expressão</button>
       </div>
     </div>
   </div>

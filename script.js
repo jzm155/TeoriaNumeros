@@ -11,9 +11,19 @@ const configModal = document.getElementById("config-modal");
 const configOpenButton = document.getElementById("config-open");
 const configCloseButton = document.getElementById("config-close");
 const displayOptionsList = document.getElementById("display-options-list");
+const expressionBuilderModal = document.getElementById("expression-builder-modal");
+const expressionBuilderOpenButton = document.getElementById("expression-builder-open");
+const expressionBuilderCloseButton = document.getElementById("expression-builder-close");
+const expressionBuilderCancelButton = document.getElementById("expression-builder-cancel");
+const expressionBuilderApplyButton = document.getElementById("expression-builder-apply");
+const expressionBuilderInput = document.getElementById("expression-builder-input");
+const expressionBuilderKeys = document.querySelector(".expression-builder__keys");
+const expressionBuilderPresets = document.querySelector(".expression-builder__presets");
+const expressionTestValue = document.getElementById("expression-test-value");
+const expressionTestResult = document.getElementById("expression-test-result");
 let list = false;
 let customFunctions = [];
-let activeDisplayOptions = ["number", "half", "sqrt", "log", "binary", "hex", "factorization", "eratosthenes"];
+let activeDisplayOptions = ["number", "half", "sqrt", "log", "binary", "hex", "factorization"];
 
 const sidePanel = document.getElementById("side-panel");
 const sidePanelToggle = document.getElementById("side-panel-toggle");
@@ -232,11 +242,6 @@ const createEratosthenesSieve = limit => {
   return sieve;
 };
 
-const formatEratosthenesSieve = value => {
-  if (!Number.isFinite(value) || value <= 1) return "Não aplicável";
-  return value / Math.log(value);
-};
-
 const viewToggleButtons = document.querySelectorAll('.view-toggle__btn');
 
 const setViewMode = view => {
@@ -305,8 +310,7 @@ const baseDisplayOptions = [
   { value: "log", label: "Log" },
   { value: "binary", label: "Binário" },
   { value: "hex", label: "Hexadecimal" },
-  { value: "factorization", label: "Fatoração" },
-  { value: "eratosthenes", label: "Teorema de numeros primos" }
+  { value: "factorization", label: "Fatoração" }
 ];
 
 const getAllDisplayOptions = () => {
@@ -331,7 +335,6 @@ const getDisplayValue = (number, displayKey) => {
   if (displayKey === "binary") return formatBaseValue(number, 2);
   if (displayKey === "hex") return formatBaseValue(number, 16);
   if (displayKey === "factorization") return formatFactorization(number);
-  if (displayKey === "eratosthenes") return formatEratosthenesSieve(number);
   if (displayKey.startsWith("custom:")) {
     const funcName = displayKey.slice(7);
     const func = customFunctions.find(fn => fn.name === funcName);
@@ -496,6 +499,101 @@ const closeConfigModal = () => {
   configModal.setAttribute("aria-hidden", "true");
 };
 
+const updateExpressionTest = () => {
+  const expression = expressionBuilderInput.value.trim();
+  if (!expression) {
+    expressionTestResult.textContent = "Insira uma expressão para testar.";
+    expressionTestResult.classList.remove("is-error");
+    return;
+  }
+
+  try {
+    const value = Function("n", `return (${expression});`)(Number(expressionTestValue.value));
+    if (typeof value !== "number" || Number.isNaN(value)) throw new Error("resultado inválido");
+    expressionTestResult.textContent = `Resultado: ${formatValue(value)}`;
+    expressionTestResult.classList.remove("is-error");
+  } catch (error) {
+    expressionTestResult.textContent = "Revise a expressão.";
+    expressionTestResult.classList.add("is-error");
+  }
+};
+
+const openExpressionBuilder = () => {
+  expressionBuilderInput.value = funcBodyInput.value;
+  expressionBuilderModal.classList.add("is-open");
+  expressionBuilderModal.setAttribute("aria-hidden", "false");
+  updateExpressionTest();
+  expressionBuilderInput.focus();
+  expressionBuilderInput.setSelectionRange(expressionBuilderInput.value.length, expressionBuilderInput.value.length);
+};
+
+const closeExpressionBuilder = () => {
+  expressionBuilderModal.classList.remove("is-open");
+  expressionBuilderModal.setAttribute("aria-hidden", "true");
+  expressionBuilderOpenButton.focus();
+};
+
+const insertExpressionText = (text, caretOffset = 0) => {
+  const start = expressionBuilderInput.selectionStart;
+  const end = expressionBuilderInput.selectionEnd;
+  const current = expressionBuilderInput.value;
+  expressionBuilderInput.value = `${current.slice(0, start)}${text}${current.slice(end)}`;
+  const position = start + text.length + caretOffset;
+  expressionBuilderInput.focus();
+  expressionBuilderInput.setSelectionRange(position, position);
+  updateExpressionTest();
+};
+
+expressionBuilderOpenButton.onclick = openExpressionBuilder;
+expressionBuilderCloseButton.onclick = closeExpressionBuilder;
+expressionBuilderCancelButton.onclick = closeExpressionBuilder;
+expressionBuilderModal.querySelector(".modal__backdrop").onclick = closeExpressionBuilder;
+expressionBuilderInput.oninput = updateExpressionTest;
+expressionTestValue.oninput = updateExpressionTest;
+
+expressionBuilderPresets.onclick = event => {
+  const preset = event.target.closest("button[data-expression]");
+  if (!preset) return;
+  expressionBuilderInput.value = preset.dataset.expression;
+  funcNameInput.value = preset.dataset.presetName;
+  updateExpressionTest();
+  expressionBuilderInput.focus();
+  expressionBuilderInput.setSelectionRange(expressionBuilderInput.value.length, expressionBuilderInput.value.length);
+};
+
+expressionBuilderKeys.onclick = event => {
+  const button = event.target.closest("button");
+  if (!button) return;
+
+  if (button.dataset.action === "clear") {
+    expressionBuilderInput.value = "";
+    expressionBuilderInput.focus();
+  } else if (button.dataset.action === "backspace") {
+    const start = expressionBuilderInput.selectionStart;
+    const end = expressionBuilderInput.selectionEnd;
+    const value = expressionBuilderInput.value;
+    if (start !== end) {
+      expressionBuilderInput.value = `${value.slice(0, start)}${value.slice(end)}`;
+    } else if (start > 0) {
+      expressionBuilderInput.value = `${value.slice(0, start - 1)}${value.slice(start)}`;
+      expressionBuilderInput.setSelectionRange(start - 1, start - 1);
+    }
+    expressionBuilderInput.focus();
+  } else {
+    insertExpressionText(button.dataset.insert, Number(button.dataset.caret || 0));
+    return;
+  }
+  updateExpressionTest();
+};
+
+expressionBuilderApplyButton.onclick = () => {
+  const expression = expressionBuilderInput.value.trim();
+  if (!expression) return;
+  funcBodyInput.value = expression;
+  closeExpressionBuilder();
+  funcBodyInput.focus();
+};
+
 addFuncButton.onclick = () => {
   const name = funcNameInput.value.trim();
   const body = funcBodyInput.value.trim();
@@ -519,6 +617,10 @@ configCloseButton.onclick = closeConfigModal;
 configModal.querySelector(".modal__backdrop").onclick = closeConfigModal;
 
 document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && expressionBuilderModal.classList.contains("is-open")) {
+    closeExpressionBuilder();
+    return;
+  }
   if (event.key === "Escape" && configModal.classList.contains("is-open")) {
     closeConfigModal();
   }
@@ -570,6 +672,13 @@ const renderPanelChart = (container, numbers) => {
         <span>Máx: ${formatValue(maxValue)}</span>
         <span>Mín: ${formatValue(minValue)}</span>
       </div>
+      <div class="chart-controls" role="group" aria-label="Controles de zoom do gráfico">
+        <span class="chart-controls__label">Zoom</span>
+        <button class="chart-zoom-button" type="button" data-chart-zoom="out" aria-label="Diminuir zoom do gráfico">−</button>
+        <output class="chart-zoom-level" aria-live="polite">100%</output>
+        <button class="chart-zoom-button" type="button" data-chart-zoom="in" aria-label="Aumentar zoom do gráfico">+</button>
+        <button class="chart-zoom-reset" type="button" data-chart-zoom="reset">Redefinir</button>
+      </div>
       <div class="chart-line-wrapper">
         <div class="chart-tooltip" aria-hidden="true"></div>
         <svg viewBox="0 0 ${width} ${height}" aria-label="Gráfico de evolução de valores">
@@ -583,7 +692,39 @@ const renderPanelChart = (container, numbers) => {
 
   const chartWrapper = container.querySelector('.chart-line-wrapper');
   const chartTooltip = container.querySelector('.chart-tooltip');
+  const chartSvg = chartWrapper.querySelector('svg');
+  const chartZoomLevel = container.querySelector('.chart-zoom-level');
+  const chartZoomButtons = container.querySelectorAll('[data-chart-zoom]');
   const pointGroups = chartWrapper.querySelectorAll('g.chart-point-group');
+
+  let chartZoom = 1;
+  const minZoom = 1;
+  const maxZoom = 4;
+  const zoomStep = 0.25;
+
+  const updateChartZoom = () => {
+    chartSvg.style.width = `${chartZoom * 100}%`;
+    chartSvg.style.height = `${240 * chartZoom}px`;
+    chartZoomLevel.textContent = `${Math.round(chartZoom * 100)}%`;
+    chartZoomButtons.forEach(button => {
+      const action = button.dataset.chartZoom;
+      button.disabled = (action === 'out' && chartZoom <= minZoom) || (action === 'in' && chartZoom >= maxZoom);
+    });
+  };
+
+  chartZoomButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      if (button.dataset.chartZoom === 'in') chartZoom = Math.min(maxZoom, chartZoom + zoomStep);
+      if (button.dataset.chartZoom === 'out') chartZoom = Math.max(minZoom, chartZoom - zoomStep);
+      if (button.dataset.chartZoom === 'reset') {
+        chartZoom = minZoom;
+        chartWrapper.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+      }
+      updateChartZoom();
+    });
+  });
+
+  updateChartZoom();
 
   pointGroups.forEach(group => {
     group.addEventListener('mouseenter', event => {
@@ -596,8 +737,8 @@ const renderPanelChart = (container, numbers) => {
 
     group.addEventListener('mousemove', event => {
       const rect = chartWrapper.getBoundingClientRect();
-      chartTooltip.style.left = `${event.clientX - rect.left + 10}px`;
-      chartTooltip.style.top = `${event.clientY - rect.top + 10}px`;
+      chartTooltip.style.left = `${event.clientX - rect.left + chartWrapper.scrollLeft + 10}px`;
+      chartTooltip.style.top = `${event.clientY - rect.top + chartWrapper.scrollTop + 10}px`;
     });
 
     group.addEventListener('mouseleave', () => {
