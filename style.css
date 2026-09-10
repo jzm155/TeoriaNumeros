@@ -893,6 +893,59 @@ body {
   gap: 12px;
 }
 
+.table-wrapper {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.values-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 420px;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.values-table th,
+.values-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.values-table th {
+  position: sticky;
+  top: 0;
+  background: #172033;
+  color: #bae6fd;
+  font-weight: 700;
+  z-index: 1;
+}
+
+.values-table td {
+  color: #f8fafc;
+}
+
+.values-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.values-table tbody tr:hover td {
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.table-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: #cbd5e1;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .chart-summary {
   display: flex;
   justify-content: space-between;

@@ -482,6 +482,8 @@ const refreshPanelsDisplayOptions = () => {
     const activeTab = panel.querySelector('.panel-tab.active')?.dataset.view || 'nums';
     if (activeTab === 'chart') {
       renderPanelChart(viewEl, panel._visibleNumbers || []);
+    } else if (activeTab === 'table') {
+      renderPanelTable(viewEl, panel._visibleNumbers || []);
     } else {
       renderPanelNumbers(viewEl, panel._visibleNumbers || [], panel._currentDisplay);
     }
@@ -786,6 +788,37 @@ const renderPanelNumbers = (container, numbers, displayKey = 'number') => {
   container.appendChild(list);
 };
 
+const renderPanelTable = (container, numbers) => {
+  const tableOptions = getActiveDisplayOptions();
+
+  if (!numbers.length || !tableOptions.length) {
+    container.innerHTML = '<div class="table-empty">Sem valores para exibir</div>';
+    return;
+  }
+
+  const orderedOptions = [...tableOptions].sort((first, second) => {
+    const order = ["number", "half", "factorization", "sqrt", "log", "binary", "hex"];
+    const firstIndex = order.indexOf(first.value);
+    const secondIndex = order.indexOf(second.value);
+    return (firstIndex === -1 ? order.length : firstIndex) - (secondIndex === -1 ? order.length : secondIndex);
+  });
+
+  container.innerHTML = `
+    <div class="table-wrapper">
+      <table class="values-table">
+        <thead>
+          <tr>${orderedOptions.map(option => `<th scope="col">${option.label}</th>`).join("")}</tr>
+        </thead>
+        <tbody>
+          ${numbers.map(number => `
+            <tr>${orderedOptions.map(option => `<td>${formatValue(getDisplayValue(number, option.value))}</td>`).join("")}</tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+};
+
 document.getElementById("gen").onclick = () => {
   let a = +start.value;
   let b = +end.value;
@@ -813,6 +846,7 @@ document.getElementById("gen").onclick = () => {
     <div class="panel-tabs">
       <button class="panel-tab active" type="button" data-view="nums">Números</button>
       <button class="panel-tab" type="button" data-view="chart">Gráfico</button>
+      <button class="panel-tab" type="button" data-view="table">Tabela</button>
     </div>
     <div class="panel-body">
       <div class="panel-view"></div>
@@ -838,6 +872,8 @@ document.getElementById("gen").onclick = () => {
 
     if (view === "chart") {
       renderPanelChart(viewEl, visibleNumbers);
+    } else if (view === "table") {
+      renderPanelTable(viewEl, visibleNumbers);
     } else {
       renderPanelNumbers(viewEl, visibleNumbers, p._currentDisplay);
     }
